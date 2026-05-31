@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:toko_online/widgets/bottom_nav.dart'; // 1. IMPORT WIDGET BOTTOM NAV
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -16,10 +17,9 @@ class _DashboardViewState extends State<DashboardView> {
   @override
   void initState() {
     super.initState();
-    _loadUserData(); // Membaca session data saat halaman dibuka sesuai modul
+    _loadUserData();
   }
 
-  // Fungsi membaca data SharedPreferences bawaan project toko online Anda
   void _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     final userDataString = prefs.getString('user_data');
@@ -44,7 +44,6 @@ class _DashboardViewState extends State<DashboardView> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              // Fungsi Logout: Hapus session lama lalu tendang balik ke halaman Login
               final prefs = await SharedPreferences.getInstance();
               await prefs.remove('user_data');
               if (mounted) {
@@ -78,6 +77,8 @@ class _DashboardViewState extends State<DashboardView> {
           ],
         ),
       ),
+      // 2. PASANG BOTTOM NAV DI SINI (SEJAJAR DENGAN BODY)
+      bottomNavigationBar: const BottomNav(0), // Index 0 artinya menu Dashboard yang aktif
     );
   }
 }
