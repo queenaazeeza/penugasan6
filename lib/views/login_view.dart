@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toko_online/services/user.dart';
 
 class AlertMessage {
@@ -32,7 +34,7 @@ class _LoginViewState extends State<LoginView> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Memanggil fungsi login dari UserService
+      // Memanggil fungsi login dari UserService yang baru
       final response = await UserService.login(
         _emailController.text,
         _passwordController.text,
@@ -41,17 +43,25 @@ class _LoginViewState extends State<LoginView> {
       setState(() => _isLoading = false);
 
       if (response.status) {
-        // Jika sukses, tampilkan alert hijau
+        // PROSES UTAMA: Menyimpan token asli dari Postman ke memori lokal HP
+        final prefs = await SharedPreferences.getInstance();
+        Map<String, dynamic> sessionData = {
+          'token': response.token,
+          'user': response.user,
+        };
+        await prefs.setString('user_data', jsonEncode(sessionData));
+
+        // Tampilkan alert sukses warna hijau
         AlertMessage.showAlert(context, "Login Berhasil!", true);
         
-        // Jeda 1.5 detik lalu navigasikan ke halaman Dashboard
+        // Jeda 1.5 detik lalu pindah ke halaman Dashboard
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (mounted) {
             Navigator.pushReplacementNamed(context, '/dashboard');
           }
         });
       } else {
-        // Jika gagal, tampilkan pesan error dari API (alert merah)
+        // Jika gagal, tampilkan pesan error merah dari API
         AlertMessage.showAlert(context, response.message, false);
       }
     }

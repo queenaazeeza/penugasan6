@@ -1,98 +1,59 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:toko_online/models/response_data_map.dart'; 
-import 'package:toko_online/services/url.dart' as url; 
+
+// Class pembungkus data hasil respons login dari Postman
+class LoginResult {
+  final bool status;
+  final String message;
+  final String token;
+  final Map<String, dynamic>? user;
+
+  LoginResult({
+    required this.status,
+    required this.message,
+    required this.token,
+    this.user,
+  });
+}
 
 class UserService {
-  // 1. Fungsi Register (Sudah diperbaiki agar tidak TypeError saat error API muncul)
-  static Future<ResponseDataMap> registerUser(Map<String, dynamic> data) async {
-    var uri = Uri.parse("${url.BaseUrl}/auth/register");
+  static Future<LoginResult> login(String email, String password) async {
     try {
-      var response = await http.post(uri, body: data);
-      if (response.statusCode == 200) {
-        var dataJson = json.decode(response.body);
-        if (dataJson["status"] == true) {
-          return ResponseDataMap(
-            status: true,
-            message: "Berhasil register user",
-            data: dataJson,
-          );
-        } else {
-          // JIKA BACKEND MENGIRIMKAN ERROR BERBENTUK MAP/OBJECT (Validator Laravel)
-          var message = "";
-          if (dataJson["message"] is Map) {
-            for (String key in dataJson["message"].keys) {
-              message += dataJson["message"][key][0].toString() + "\n";
-            }
-          } else {
-            message = dataJson["message"] ?? "Gagal register";
-          }
+      // URL disesuaikan dengan domain utama Postman Anda
+      final response = await http.post(
+        Uri.parse('https://learn.smktelkom-mlg.sch.id/api'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      );
 
-          return ResponseDataMap(
-            status: false,
-            message: message,
-          );
-        }
+      final responseData = jsonDecode(response.body);
+
+      // Jika server membalas status true (Berhasil Login)
+      if (response.statusCode == 200 && responseData['status'] == true) {
+        return LoginResult(
+          status: true,
+          message: responseData['message'] ?? 'Login Berhasil',
+          token: responseData['token'] ?? '', // Mengambil teks token panjang JWT
+          user: responseData['user'],
+        );
       } else {
-        return ResponseDataMap(
+        return LoginResult(
           status: false,
-          message: "Gagal register dengan code error ${response.statusCode}",
+          message: responseData['message'] ?? 'Email atau Password salah',
+          token: '',
         );
       }
     } catch (e) {
-      return ResponseDataMap(
+      return LoginResult(
         status: false,
-        message: "Terjadi kesalahan jaringan: $e",
+        message: 'Gagal terhubung ke server: ${e.toString()}',
+        token: '',
       );
     }
   }
 
-  // 2. Fungsi Login 
-  static Future<ResponseDataMap> login(String email, String password) async {
-    var uri = Uri.parse("${url.BaseUrl}/auth/login"); 
-    
-    try {
-      var response = await http.post(uri, body: {
-        'email': email,
-        'password': password,
-      });
-
-      if (response.statusCode == 200) {
-        var dataJson = json.decode(response.body);
-
-        if (dataJson["status"] == true) {
-          var userData = dataJson["data"];
-          
-          if (dataJson["authorisation"] != null) {
-            userData["token"] = dataJson["authorisation"]["token"];
-          }
-
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_data', jsonEncode(userData));
-
-          return ResponseDataMap(
-            status: true,
-            message: "Login Berhasil!",
-            data: dataJson,
-          );
-        } else {
-          return ResponseDataMap(
-            status: false,
-            message: dataJson["message"] ?? "Email dan password salah",
-          );
-        }
-      } else {
-        return ResponseDataMap(
-          status: false,
-          message: "Gagal login: Error ${response.statusCode}",
-        );
-      }
-    } catch (e) {
-      return ResponseDataMap(
-        status: false,
-        message: "Terjadi kesalahan koneksi: $e",
-      );
-    }
-  }
+  static Future registerUser(Map<String, String?> data) async {}
 }
